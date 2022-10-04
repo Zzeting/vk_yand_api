@@ -1,10 +1,6 @@
 from OAuth_token import OAuth_token_vk
 from ya_token import QAuth_TOKEN_ya
 import vk_api
-import time
-import json
-
-
 
 
 if __name__ == '__main__':

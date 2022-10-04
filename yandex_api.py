@@ -82,7 +82,6 @@ class YandexDisc:
                              'path': disk_file_path}
         response = requests.post(upload_url, headers=headers, params=upload_url_params)
         if response:
-            print('Загрузка прошла успешно')
             return
         else:
             print('Error:', response.status_code)

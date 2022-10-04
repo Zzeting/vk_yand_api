@@ -1,15 +1,19 @@
 import time
 import requests
-from pprint import pprint
-import pandas as pd
 import yandex_api
 import json
+from tqdm import tqdm
+from loguru import logger
+
+
+logger.add('logfile.log', format='{time} {level} {message}')
 
 
 def write_json(file_name, new_json):
     file_name = f'{file_name}.json'
     with open(file_name, 'a') as outfile:
-        json.dump(new_json, outfile)
+        json.dump(new_json, outfile, indent=4)
+        logger.info(f'Create file {file_name}')
 
 
 class VKUser:
@@ -29,11 +33,11 @@ class VKUser:
         return res.json()
 
     def group_search(self, q, sorting=0):
-        '''
+        """
         Параметры sort
         0 - сортировать по умолчанию
         6 - сортировать по количеству пользователей
-        '''
+        """
         group_search_params = {
             'q': q,
             'sort': sorting,
@@ -76,17 +80,21 @@ class VKUser:
         return res
 
     def _get_all_albums(self, owner_id=None):
-        url_get_followers = self.url + 'photos.getAlbums'
+        """
+        параметр owner_id: - id-пользователя ВК, по умолчанию используется id владельца токена
+        """
+
+        url_get_albums = self.url + 'photos.getAlbums'
         get_albums_params = {'owner_id': owner_id,
                              'need_system': 1}
-        res = requests.get(url_get_followers, params={**self.params, **get_albums_params}).json()
+        res = requests.get(url_get_albums, params={**self.params, **get_albums_params}).json()
         return [[i['id'], i['size']] for i in res['response']['items']]
 
     def _processing_photo(self, owner_id=None, extended=0, y=None):
         albums = self._get_all_albums(owner_id=owner_id)
         url_get_followers = self.url + 'photos.get'
         all_photos = []
-        for album, count in albums:
+        for album, count in tqdm(albums, desc='Получение данных о фото-альбомах', unit=' id_albums', unit_scale=1, leave=False, colour='green'):
             time.sleep(0.33)
             get_followers_params = {'owner_id': owner_id,
                                     'album_id': album,
@@ -108,40 +116,51 @@ class VKUser:
         return all_photos
 
     def import_photoVK_in_yandex(self, ya_token, id_vk=None, count=5, extended=0, y=None):
+        """
+        :param ya_token: - OAuth - токен яндекс диска
+        :param id_vk: - id - пользователя вк
+        :param count: - количество фото, доступное для загрузки, по умолчанию 5
+        :param extended: 1 - получение расширенной информации, по умолчанию 0
+        """
         ya_disk = yandex_api.YandexDisc(ya_token)
         photos = self.get_all_photos(owner_id=id_vk, extended=extended, y=y)
         data_urls = []
         data_for_json = []
-        for qty_photo in range(count):
+
+        for qty_photo in tqdm(range(count), desc='Загрузка данных о фото', unit=' id_albums', unit_scale=1, leave=False, colour='green'):
+            time.sleep(0.33)
             for photo in photos[qty_photo]:
                 data_urls.append([photo['file_id'],
                                   photo['file_size_url'][0]['url'],
                                   photo['file_likes'],
                                   photo['file_size_url'][0]['type']])
+
         folder_path = input('Введите название папки для загрузки фото... --> ')
-        for data in data_urls:
-            data_for_json.append([{'file_id': data[0],
-                                   'file_likes': f'{data[2]}.jpg',
-                                   'size': data[3]}])
+
+        for data in tqdm(data_urls, desc='Загрузка фото', unit=' photo', unit_scale=1, leave=False, colour='green'):
+            time.sleep(0.2)
+            data_for_json.append({'file_id': data[0],
+                                  'file_likes': f'{data[2]}.jpg',
+                                  'size': data[3]})
             if not ya_disk.get_meta_info_files(folder_path):
                 ya_disk.create_folder(folder_path)
             disk_file_path = f'{folder_path}/{data[0]}.jpg'
             ya_disk.upload_url_disk(disk_file_path, data[1])
-        write_json('photo', data_for_json)
 
-    def newsfeed_search(self, q, extended=1):
-        news_url = self.url + 'newsfeed.search'
-        new_params = {'q': q,
-                      'count': 200}
+        write_json(f'{folder_path}', data_for_json)
+        print('Фото успешно загружены')
 
-        newsfeed = pd.DataFrame()
-
-        while True:
-            result = requests.get(news_url, params={**self.params, **new_params})
-            time.sleep(0.33)
-            newsfeed = pd.concat([newsfeed, pd.DataFrame(result.json()['response']['items'])])
-            if 'next_from' in result.json()['response']:
-                new_params['start_from'] = result.json()['response']['next_from']
-            else:
-                break
-        return newsfeed
+    # def newsfeed_search(self, q, extended=1):
+    #     news_url = self.url + 'newsfeed.search'
+    #     new_params = {'q': q,
+    #                   'count': 200}
+    #     newsfeed = pd.DataFrame()
+    #     while True:
+    #         result = requests.get(news_url, params={**self.params, **new_params})
+    #         time.sleep(0.33)
+    #         newsfeed = pd.concat([newsfeed, pd.DataFrame(result.json()['response']['items'])])
+    #         if 'next_from' in result.json()['response']:
+    #             new_params['start_from'] = result.json()['response']['next_from']
+    #         else:
+    #             break
+    #     return newsfeed
