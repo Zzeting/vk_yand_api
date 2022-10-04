@@ -4,5 +4,5 @@ import vk_api
 
 if __name__ == '__main__':
     vk = vk_api.VKUser(OAuth_token_vk)
-    vk.import_photoVK_in_yandex(QAuth_TOKEN_ya)
+    vk.import_photoVK_in_yandex(QAuth_TOKEN_ya, id_vk='325379352')
 

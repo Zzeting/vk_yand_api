@@ -21,7 +21,6 @@ class YandexDisc:
             files_download.append([files_name['name'], files_name['file']])
         return files_download
 
-
     def get_meta_info_files(self, path):
         params = {'path': path}
         files_url = 'https://cloud-api.yandex.net/v1/disk/resources'
@@ -95,5 +94,3 @@ def uploads_file_disk(self):
     file_name = [i for i in open_file.split('\\')]
     disk_file_path = f'{folder_path}/{file_name[-1]}'
     self.upload_file_disk(disk_file_path, open_file)
-
-
