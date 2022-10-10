@@ -1,19 +1,7 @@
 import time
 import requests
-import yandex_api
-import json
 from tqdm import tqdm
 from loguru import logger
-
-
-logger.add('logfile.log', format='{time} {level} {message}')
-
-
-def write_json(file_name, new_json):
-    file_name = f'{file_name}.json'
-    with open(file_name, 'a') as outfile:
-        json.dump(new_json, outfile, indent=4)
-        logger.info(f'Create file {file_name}')
 
 
 class VKUser:
@@ -87,80 +75,82 @@ class VKUser:
         url_get_albums = self.url + 'photos.getAlbums'
         get_albums_params = {'owner_id': owner_id,
                              'need_system': 1}
-        res = requests.get(url_get_albums, params={**self.params, **get_albums_params}).json()
-        return [[i['id'], i['size']] for i in res['response']['items']]
-
-    def _processing_photo(self, owner_id=None, extended=0, y=None):
-        albums = self._get_all_albums(owner_id=owner_id)
-        url_get_followers = self.url + 'photos.get'
-        all_photos = []
-        for album, count in tqdm(albums, desc='Получение данных о фото-альбомах', unit=' id_albums', unit_scale=1, leave=False, colour='green'):
-            time.sleep(0.33)
-            get_followers_params = {'owner_id': owner_id,
-                                    'album_id': album,
-                                    'extended': '1',
-                                    'count': count}
-            res = requests.get(url_get_followers, params={**self.params, **get_followers_params}).json()
+        res = requests.get(url_get_albums, params={**self.params, **get_albums_params})
+        if res:
+            res = res.json()
             if 'error' not in res.keys():
-                all_photos.append(res['response']['items'])
-        return all_photos
+                logger.info(f'Get info all albums user {owner_id}')
+                return [[i['id'], i['size']] for i in res['response']['items']]
+            else:
+                logger.info(f'Error: {res["error"]["error_code"]}')
+                return
+        else:
+            logger.info(f'Error: {res.status_code}')
 
-    def get_all_photos(self, owner_id=None, extended=0, y=None):
+    def _processing_photo(self, owner_id=None, extended=1):
+        albums = self._get_all_albums(owner_id=owner_id)
+        if albums:
+            url_get_followers = self.url + 'photos.get'
+            all_photos = []
+            for album, count in tqdm(albums, desc='Получение данных о фото-альбомах', unit=' id_albums', unit_scale=1, leave=False, colour='green'):
+                time.sleep(0.33)
+                get_followers_params = {'owner_id': owner_id,
+                                        'album_id': album,
+                                        'extended': extended,
+                                        'count': count}
+                res = requests.get(url_get_followers, params={**self.params, **get_followers_params})
+                if res:
+                    res = res.json()
+                    if 'error' not in res.keys():
+                        all_photos.append(res['response']['items'])
+                    else:
+                        logger.info(f'Error: {res["error"]["error_code"]}')
+                        return
+                else:
+                    logger.info(f'Error: {res.status_code}')
+                    return
+            return all_photos
+        else:
+            logger.info('Error: not data in albums')
+
+    def get_all_photos(self, owner_id=None, extended=1):
         all_photos = []
-        photos = self._processing_photo(owner_id=owner_id, extended=extended, y=y)
-        for i in range(len(photos)):
-            for photo in photos[i]:
-                all_photos.append([{'file_id': photo['id'],
-                                    'file_likes': photo['likes']['count'],
-                                    'file_size_url': [max(photo['sizes'], key=lambda size: size['type'])]}])
-        return all_photos
+        photos = self._processing_photo(owner_id=owner_id, extended=extended)
+        if photos:
+            for i in range(len(photos)):
+                for photo in photos[i]:
+                    all_photos.append([{'file_id': photo['id'],
+                                        'file_likes': photo['likes']['count'],
+                                        'file_size_url': [max(photo['sizes'], key=lambda size: size['type'])]}])
+            return all_photos
+        else:
+            logger.info('Error: no data in photos')
 
-    def import_photoVK_in_yandex(self, ya_token, id_vk=None, count=5, extended=0, y=None):
+    def get_photoVK(self, id_vk=None, count=5, extended=1):
         """
-        :param ya_token: - OAuth - токен яндекс диска
         :param id_vk: - id - пользователя вк
         :param count: - количество фото, доступное для загрузки, по умолчанию 5
         :param extended: 1 - получение расширенной информации, по умолчанию 0
         """
-        ya_disk = yandex_api.YandexDisc(ya_token)
-        photos = self.get_all_photos(owner_id=id_vk, extended=extended, y=y)
-        data_urls = []
-        data_for_json = []
+        photos = self.get_all_photos(owner_id=id_vk, extended=extended)
+        if photos:
+            data_urls = []
 
-        for qty_photo in tqdm(range(count), desc='Загрузка данных о фото', unit=' id_albums', unit_scale=1, leave=False, colour='green'):
-            time.sleep(0.33)
-            for photo in photos[qty_photo]:
-                data_urls.append([photo['file_id'],
-                                  photo['file_size_url'][0]['url'],
-                                  photo['file_likes'],
-                                  photo['file_size_url'][0]['type']])
+            for qty_photo in tqdm(range(count),
+                                  desc='Загрузка данных о фото',
+                                  unit=' id_albums',
+                                  unit_scale=1,
+                                  leave=False,
+                                  colour='green'):
+                time.sleep(0.33)
+                for photo in photos[qty_photo]:
+                    data_urls.append([photo['file_id'],
+                                      photo['file_size_url'][0]['url'],
+                                      photo['file_likes'],
+                                      photo['file_size_url'][0]['type']])
+            return data_urls
+        else:
+            logger.info('Error: no photo')
 
-        folder_path = input('Введите название папки для загрузки фото... --> ')
 
-        for data in tqdm(data_urls, desc='Загрузка фото', unit=' photo', unit_scale=1, leave=False, colour='green'):
-            time.sleep(0.2)
-            data_for_json.append({'file_id': data[0],
-                                  'file_likes': f'{data[2]}.jpg',
-                                  'size': data[3]})
-            if not ya_disk.get_meta_info_files(folder_path):
-                ya_disk.create_folder(folder_path)
-            disk_file_path = f'{folder_path}/{data[0]}.jpg'
-            ya_disk.upload_url_disk(disk_file_path, data[1])
 
-        write_json(f'{folder_path}', data_for_json)
-        print('Фото успешно загружены')
-
-    # def newsfeed_search(self, q, extended=1):
-    #     news_url = self.url + 'newsfeed.search'
-    #     new_params = {'q': q,
-    #                   'count': 200}
-    #     newsfeed = pd.DataFrame()
-    #     while True:
-    #         result = requests.get(news_url, params={**self.params, **new_params})
-    #         time.sleep(0.33)
-    #         newsfeed = pd.concat([newsfeed, pd.DataFrame(result.json()['response']['items'])])
-    #         if 'next_from' in result.json()['response']:
-    #             new_params['start_from'] = result.json()['response']['next_from']
-    #         else:
-    #             break
-    #     return newsfeed

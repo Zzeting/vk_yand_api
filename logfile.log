@@ -2,3 +2,10 @@
 2022-10-04T23:53:27.549535+1000 INFO Create file photo_my_photo.json
 2022-10-04T23:55:46.679128+1000 INFO Create file my_photo.json
 2022-10-05T00:52:36.465704+1000 INFO Create file photo_ilya.json
+2022-10-10T22:32:41.368822+1000 INFO Get info all albums user 325379352
+2022-10-10T22:33:11.163403+1000 INFO Create file Kto-to.json
+2022-10-10T23:01:01.466871+1000 INFO Get info all albums user 325379352
+2022-10-10T23:01:01.466871+1000 INFO Get info all albums user 325379352
+2022-10-11T00:56:10.709368+1000 INFO Get info all albums user 325379352
+2022-10-11T00:56:36.630353+1000 INFO Photo upload in ya_disc
+2022-10-11T00:56:36.630353+1000 INFO Update file my_photo.json

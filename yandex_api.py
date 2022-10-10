@@ -1,5 +1,26 @@
 import requests
 import easygui
+from tqdm import tqdm
+import time
+import json
+from loguru import logger
+from os import path
+logger.add('logfile.log', format='{time} {level} {message}')
+
+
+def write_json(file_name, new_json):
+    file_name = f'{file_name}.json'
+    if path.exists(file_name):
+        with open(file_name, 'r') as file:
+            data = json.load(file)
+            data.extend(new_json)
+            with open(file_name, 'w') as outfile:
+                json.dump(data, outfile, indent=4)
+                logger.info(f'Update file {file_name}')
+    else:
+        with open(file_name, 'w') as outfile:
+            json.dump(new_json, outfile, indent=4)
+            logger.info(f'Create file {file_name}')
 
 
 class YandexDisc:
@@ -83,14 +104,33 @@ class YandexDisc:
         if response:
             return
         else:
-            print('Error:', response.status_code)
+            logger.info(f'Error: {response.status_code}')
 
+    def upload_photo_disk(self, photo):
+        if photo:
+            data_for_json = []
+            folder_path = input('Введите название папки для загрузки фото... --> ')
 
-def uploads_file_disk(self):
-    open_file = easygui.fileopenbox()
-    folder_path = input('Введите название папки Яндекс.Диск... ')
-    if not self.get_meta_info_files(folder_path):
-        self.create_folder(folder_path)
-    file_name = [i for i in open_file.split('\\')]
-    disk_file_path = f'{folder_path}/{file_name[-1]}'
-    self.upload_file_disk(disk_file_path, open_file)
+            for data in tqdm(photo, desc='Загрузка фото ', unit=' photo', unit_scale=1, leave=False, colour='green'):
+                time.sleep(0.2)
+                data_for_json.append({'file_id': data[0],
+                                      'file_likes': f'{data[2]}.jpg',
+                                      'size': data[3]})
+                if not self.get_meta_info_files(folder_path):
+                    self.create_folder(folder_path)
+                disk_file_path = f'{folder_path}/{data[0]}.jpg'
+                self.upload_url_disk(disk_file_path, data[1])
+
+            logger.info('Photo upload in ya_disc')
+            write_json(f'{folder_path}', data_for_json)
+        else:
+            logger.info('Error: photo None')
+
+    def uploads_file_disk(self):
+        open_file = easygui.fileopenbox()
+        folder_path = input('Введите название папки Яндекс.Диск... ')
+        if not self.get_meta_info_files(folder_path):
+            self.create_folder(folder_path)
+        file_name = [i for i in open_file.split('\\')]
+        disk_file_path = f'{folder_path}/{file_name[-1]}'
+        self.upload_file_disk(disk_file_path, open_file)
