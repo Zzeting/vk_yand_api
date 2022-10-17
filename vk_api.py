@@ -79,13 +79,14 @@ class VKUser:
         if res:
             res = res.json()
             if 'error' not in res.keys():
-                logger.info(f'Get info all albums user {owner_id}')
+                logger.info(f'Get info all albums user id:{owner_id}')
                 return [[i['id'], i['size']] for i in res['response']['items']]
             else:
                 logger.info(f'Error: {res["error"]["error_code"]}')
-                return
+                exit(1)
         else:
-            logger.info(f'Error: {res.status_code}')
+            logger.info(f'Error not photo: {res.status_code}')
+            exit(1)
 
     def _processing_photo(self, owner_id=None, extended=1):
         albums = self._get_all_albums(owner_id=owner_id)
@@ -105,13 +106,14 @@ class VKUser:
                         all_photos.append(res['response']['items'])
                     else:
                         logger.info(f'Error: {res["error"]["error_code"]}')
-                        return
+                        exit(1)
                 else:
-                    logger.info(f'Error: {res.status_code}')
-                    return
+                    logger.info(f'Error not photo: {res.status_code}')
+                    exit(1)
             return all_photos
         else:
             logger.info('Error: not data in albums')
+            exit(1)
 
     def get_all_photos(self, owner_id=None, extended=1):
         all_photos = []
@@ -125,6 +127,7 @@ class VKUser:
             return all_photos
         else:
             logger.info('Error: no data in photos')
+            exit(1)
 
     def get_photoVK(self, id_vk=None, count=5, extended=1):
         """
@@ -151,6 +154,7 @@ class VKUser:
             return data_urls
         else:
             logger.info('Error: no photo')
+            exit(1)
 
 
 

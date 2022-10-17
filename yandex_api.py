@@ -3,6 +3,7 @@ import easygui
 from tqdm import tqdm
 import time
 import json
+from sys import exit
 from loguru import logger
 from os import path
 logger.add('logfile.log', format='{time} {level} {message}')
@@ -60,7 +61,7 @@ class YandexDisc:
             return res
         else:
             print(f'Error: {response.status_code}')
-            return
+            exit(1)
 
     def copy_file(self, from_path, in_path):
         copy_url = 'https://cloud-api.yandex.net/v1/disk/resources/copy'
@@ -84,7 +85,7 @@ class YandexDisc:
             return res['href']
         else:
             print(f'Error: {response.status_code}')
-            return
+            exit(1)
 
     def upload_file_disk(self, disk_file_path, open_file_pc):
         href = self._get_upload_link(disk_file_path=disk_file_path)
@@ -94,6 +95,7 @@ class YandexDisc:
             return
         else:
             print('Error:', response.status_code)
+            exit(1)
 
     def upload_url_disk(self, disk_file_path, url):
         upload_url = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
@@ -105,6 +107,7 @@ class YandexDisc:
             return
         else:
             logger.info(f'Error: {response.status_code}')
+            exit(1)
 
     def upload_photo_disk(self, photo):
         if photo:
@@ -125,6 +128,7 @@ class YandexDisc:
             write_json(f'{folder_path}', data_for_json)
         else:
             logger.info('Error: photo None')
+            exit(1)
 
     def uploads_file_disk(self):
         open_file = easygui.fileopenbox()

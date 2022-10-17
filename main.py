@@ -8,7 +8,7 @@ if __name__ == '__main__':
     vk = vk_api.VKUser(OAuth_token_vk)
     ya_dick = yandex_api.YandexDisc(QAuth_TOKEN_ya)
 
-    photo = vk.get_photoVK(id_vk='325379352')
+    photo = vk.get_photoVK(id_vk='1')
     ya_dick.upload_photo_disk(photo)
 
 
